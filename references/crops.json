@@ -1,0 +1,31 @@
+{
+  "_comment": "Per-part reference crops. Boxes are normalised [x0, y0, x1, y1] against the source image, so they survive any rescaling. Regenerate with: python tools/crop_references.py",
+  "crops": [
+    {"name": "wheel-front-turbine",  "src": "front-quarter-left-gravel.jpg",        "box": [0.445, 0.560, 0.620, 0.890], "part": "wheels"},
+    {"name": "wheel-rear-turbine",   "src": "front-quarter-left-gravel.jpg",        "box": [0.840, 0.400, 0.970, 0.670], "part": "wheels"},
+    {"name": "wheel-front-hires",    "src": "front-quarter-left-night-doors-open.jpg", "box": [0.500, 0.620, 0.640, 0.900], "part": "wheels"},
+
+    {"name": "nose-fascia",          "src": "front-quarter-left-gravel.jpg",        "box": [0.000, 0.450, 0.380, 0.830], "part": "lamps"},
+    {"name": "grille-dmc-badge",     "src": "front-quarter-left-gravel.jpg",        "box": [0.085, 0.530, 0.250, 0.645], "part": "trim"},
+    {"name": "headlamp-outer-pair",  "src": "front-quarter-left-gravel.jpg",        "box": [0.010, 0.490, 0.115, 0.605], "part": "lamps"},
+    {"name": "headlamp-inner-pair",  "src": "front-quarter-left-gravel.jpg",        "box": [0.215, 0.555, 0.350, 0.680], "part": "lamps"},
+    {"name": "marker-front-fender",  "src": "front-quarter-left-gravel.jpg",        "box": [0.385, 0.605, 0.470, 0.680], "part": "lamps"},
+    {"name": "mirror-door",          "src": "front-quarter-left-gravel.jpg",        "box": [0.640, 0.385, 0.760, 0.470], "part": "trim"},
+    {"name": "greenhouse-side",      "src": "front-quarter-left-gravel.jpg",        "box": [0.380, 0.230, 0.930, 0.520], "part": "glazing"},
+    {"name": "swage-line-flank",     "src": "front-quarter-left-gravel.jpg",        "box": [0.300, 0.480, 0.900, 0.700], "part": "body"},
+
+    {"name": "louvres-backlight",    "src": "rear-quarter-right-doors-open.jpg",    "box": [0.110, 0.390, 0.630, 0.620], "part": "trim"},
+    {"name": "taillamp-left",        "src": "rear-quarter-right-doors-open.jpg",    "box": [0.050, 0.570, 0.230, 0.690], "part": "lamps"},
+    {"name": "taillamp-right",       "src": "rear-quarter-right-doors-open.jpg",    "box": [0.350, 0.595, 0.555, 0.715], "part": "lamps"},
+    {"name": "tail-panel-full",      "src": "rear-quarter-right-doors-open.jpg",    "box": [0.030, 0.555, 0.600, 0.750], "part": "lamps"},
+    {"name": "rear-bumper-badge",    "src": "rear-quarter-right-doors-open.jpg",    "box": [0.035, 0.660, 0.330, 0.740], "part": "trim"},
+    {"name": "exhaust-tips",         "src": "rear-quarter-right-doors-open.jpg",    "box": [0.090, 0.710, 0.530, 0.810], "part": "trim"},
+    {"name": "door-gullwing-open",   "src": "rear-quarter-right-doors-open.jpg",    "box": [0.590, 0.180, 0.960, 0.480], "part": "doors"},
+    {"name": "door-inner-hinge",     "src": "rear-quarter-right-doors-open.jpg",    "box": [0.270, 0.250, 0.590, 0.430], "part": "doors"},
+    {"name": "quarter-window-sail",  "src": "rear-quarter-right-doors-open.jpg",    "box": [0.490, 0.460, 0.730, 0.610], "part": "glazing"},
+    {"name": "arch-rear-wheel",      "src": "rear-quarter-right-doors-open.jpg",    "box": [0.620, 0.560, 0.810, 0.840], "part": "body"},
+
+    {"name": "interior-cabin",       "src": "studio-front-quarter-door-open.jpg",   "box": [0.520, 0.290, 0.870, 0.640], "part": "interior"},
+    {"name": "door-sill-jamb",       "src": "studio-front-quarter-door-open.jpg",   "box": [0.560, 0.400, 0.900, 0.720], "part": "doors"}
+  ]
+}
