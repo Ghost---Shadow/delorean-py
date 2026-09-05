@@ -404,11 +404,19 @@ def set_material(ob: bpy.types.Object, mat: bpy.types.Material) -> None:
 
 def assign_materials(ob: bpy.types.Object,
                      materials: Sequence[bpy.types.Material],
-                     chooser: Callable[[float, float, float], int]) -> None:
-    """Assign per-face material indices via `chooser(x, y, z) -> index`."""
+                     chooser: Callable[[float, float, float], int],
+                     world: bool = True) -> None:
+    """Assign per-face material indices via `chooser(x, y, z) -> index`.
+
+    Coordinates are world-space by default. `poly.center` is in object space,
+    which is the same thing only while the origin is still at the world origin
+    — move a door's origin to its hinge first and every face suddenly reads as
+    being a metre lower than it is, so the whole panel comes out black.
+    """
     ob.data.materials.clear()
     for m in materials:
         ob.data.materials.append(m)
+    matrix = ob.matrix_world if world else None
     for poly in ob.data.polygons:
-        c = poly.center
+        c = matrix @ poly.center if matrix else poly.center
         poly.material_index = chooser(c.x, c.y, c.z)

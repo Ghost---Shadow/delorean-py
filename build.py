@@ -33,7 +33,10 @@ from delorean import body as body_mod          # noqa: E402
 from delorean import config as cfg             # noqa: E402
 from delorean import doors as doors_mod        # noqa: E402
 from delorean import glazing                   # noqa: E402
+from delorean import interior as interior_mod  # noqa: E402
+from delorean import lamps as lamps_mod        # noqa: E402
 from delorean import mesh_utils as mu          # noqa: E402
+from delorean import trim as trim_mod          # noqa: E402
 from delorean import validate as validate_mod  # noqa: E402
 from delorean import wheels as wheels_mod      # noqa: E402
 from delorean.materials import MaterialLibrary, apply_clay_override  # noqa: E402
@@ -87,7 +90,7 @@ class DeLoreanBuild:
         self.check_blender_version()
         self.reset()
 
-        self.materials = MaterialLibrary()
+        self.materials = MaterialLibrary(self.cfg.engine)
         self.scene = SceneBuilder(self.materials, self.cfg)
 
         shell = body_mod.BodyBuilder(self.materials).build()
@@ -105,7 +108,11 @@ class DeLoreanBuild:
             "doors": doors,
             "glazing": glazing.build_glazing(self.materials, doors),
             "wheels": wheels_mod.build_wheels(self.materials, self.cfg.rig),
+            "lamps": lamps_mod.build_lamps(self.materials),
+            "trim": trim_mod.build_trim(self.materials),
         }
+        if self.cfg.build_interior:
+            self.parts["interior"] = interior_mod.build_interior(self.materials)
 
         if self.cfg.build_scene:
             self.scene.build()
@@ -151,6 +158,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                     help="flat grey override, for shape-only renders")
     ap.add_argument("--environment", choices=("reference", "procedural"),
                     default="reference")
+    ap.add_argument("--engine", choices=("eevee", "cycles"), default="eevee",
+                    help="eevee is fast; cycles is for finals")
     ap.add_argument("--render", action="store_true")
     ap.add_argument("--views", default="hero_front_left,hero_rear_right,side",
                     help="comma-separated view names")
@@ -167,6 +176,7 @@ def main(argv: list[str] | None = None) -> DeLoreanBuild:
     build = DeLoreanBuild(cfg.BuildConfig(
         rig=cfg.RigConfig(door_angle_deg=args.doors, steer_deg=args.steer),
         clay=args.clay,
+        engine=args.engine,
         environment=args.environment,
         resolution=(int(w), int(h)),
         samples=args.samples,

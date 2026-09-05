@@ -17,7 +17,8 @@ import bpy
 
 #: object name prefixes that stay visible even when isolating (the set dressing
 #: an object needs in order to be lit and to cast onto something)
-KEEP_VISIBLE = ("Camera", "CameraTarget", "Key", "Fill", "Rim", "Strip")
+KEEP_VISIBLE = ("Camera", "CameraTarget", "Key", "Fill", "Rim", "Strip",
+                "Softbox_")
 
 
 def _renderable() -> list[bpy.types.Object]:
@@ -62,13 +63,18 @@ def render(path: str, resolution: tuple[int, int] | None = None,
     scn = bpy.context.scene
     r = scn.render
     saved = (r.filepath, r.resolution_x, r.resolution_y)
-    saved_samples = getattr(scn.eevee, "taa_render_samples", None)
+    is_cycles = r.engine == 'CYCLES'
+    saved_samples = (scn.cycles.samples if is_cycles
+                     else getattr(scn.eevee, "taa_render_samples", None))
 
     os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
     if resolution:
         r.resolution_x, r.resolution_y = resolution
-    if samples is not None and hasattr(scn.eevee, "taa_render_samples"):
-        scn.eevee.taa_render_samples = samples
+    if samples is not None:
+        if is_cycles:
+            scn.cycles.samples = samples
+        elif hasattr(scn.eevee, "taa_render_samples"):
+            scn.eevee.taa_render_samples = samples
     r.filepath = os.path.abspath(path)
 
     try:
@@ -76,7 +82,10 @@ def render(path: str, resolution: tuple[int, int] | None = None,
     finally:
         r.filepath, r.resolution_x, r.resolution_y = saved
         if saved_samples is not None:
-            scn.eevee.taa_render_samples = saved_samples
+            if is_cycles:
+                scn.cycles.samples = saved_samples
+            else:
+                scn.eevee.taa_render_samples = saved_samples
     return os.path.abspath(path)
 
 

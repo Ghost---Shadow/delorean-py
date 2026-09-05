@@ -106,10 +106,10 @@ class SceneBuilder:
         """A key, a fill, a rim and a long overhead strip for the flanks."""
         specs = (
             # name,      type,   location,             energy, size,  rot(deg)
-            ("Key",   'AREA', (-4.2, -5.0, 5.4), 1400.0, 6.0, (38, 0, -40)),
-            ("Fill",  'AREA', ( 5.2, -5.6, 3.2),  420.0, 6.0, (62, 0,  42)),
-            ("Rim",   'AREA', ( 4.4,  6.0, 3.8),  700.0, 5.0, (58, 0, 200)),
-            ("Strip", 'AREA', ( 0.0,  0.0, 4.6),  700.0, 1.0, (0, 0, 0)),
+            ("Key",   'AREA', (-4.2, -5.0, 5.4),  600.0, 6.0, (38, 0, -40)),
+            ("Fill",  'AREA', ( 5.2, -5.6, 3.2),  180.0, 6.0, (62, 0,  42)),
+            ("Rim",   'AREA', ( 4.4,  6.0, 3.8),  320.0, 5.0, (58, 0, 200)),
+            ("Strip", 'AREA', ( 0.0,  0.0, 4.6),  260.0, 1.0, (0, 0, 0)),
         )
         out = []
         for name, kind, loc, energy, size, rot in specs:
@@ -128,6 +128,49 @@ class SceneBuilder:
             mu.link(ob)
             out.append(ob)
         return out
+
+    # -------------------------------------------------------------- softboxes
+    #: name, size (w, h), centre, euler (deg), emission strength
+    SOFTBOXES = (
+        ("Softbox_Top",   (7.0, 2.4), ( 0.00,  0.10, 4.30), (  0,  0,   0), 18.0),
+        ("Softbox_Left",  (5.0, 2.6), (-1.20, -4.20, 2.40), ( 74,  0,  -6), 12.0),
+        ("Softbox_Right", (4.2, 2.2), ( 1.60,  4.10, 2.30), (-74,  0,   4),  9.0),
+        ("Softbox_Nose",  (2.6, 1.8), (-4.60, -1.10, 1.90), ( 68,  0, -68),  7.0),
+    )
+
+    def softboxes(self) -> list[bpy.types.Object]:
+        """Large emitters, reflected by the car but invisible to the camera.
+
+        This is the whole trick to a convincing bare-metal render. Point lamps
+        give a flat sheen; a big rectangular emitter gives the long, hard-edged
+        streak that reads as polished steel. They are hidden from camera rays
+        so they light and reflect without appearing in the frame.
+        """
+        made: list[bpy.types.Object] = []
+        for name, (w, h), loc, rot_deg, strength in self.SOFTBOXES:
+            hw, hh = w / 2.0, h / 2.0
+            plane = mu.obj_from_pydata(
+                name,
+                [(-hw, -hh, 0.0), (hw, -hh, 0.0), (hw, hh, 0.0), (-hw, hh, 0.0)],
+                [(0, 1, 2, 3)])
+            plane.location = loc
+            plane.rotation_euler = tuple(math.radians(a) for a in rot_deg)
+
+            mat = bpy.data.materials.new(name)
+            mat.use_nodes = True
+            nt = mat.node_tree
+            nt.nodes.clear()
+            emit = nt.nodes.new("ShaderNodeEmission")
+            out = nt.nodes.new("ShaderNodeOutputMaterial")
+            emit.inputs["Color"].default_value = (1.0, 0.99, 0.97, 1.0)
+            emit.inputs["Strength"].default_value = strength
+            nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
+            mu.set_material(plane, mat)
+
+            self._set_many(plane, (("visible_camera", False),
+                                   ("visible_shadow", False)))
+            made.append(plane)
+        return made
 
     # ---------------------------------------------------------------- ground
     def ground(self) -> bpy.types.Object:
@@ -211,38 +254,103 @@ class SceneBuilder:
             cam.location = centre + direction * (radius / math.sin(half_fov))
 
     # ---------------------------------------------------------------- render
+    @staticmethod
+    def _set_many(target, pairs) -> None:
+        for attr, val in pairs:
+            if hasattr(target, attr):
+                try:
+                    setattr(target, attr, val)
+                except (AttributeError, TypeError):
+                    pass
+
+    def _enable_gpu(self) -> str:
+        """Use whatever accelerator this machine has; fall back to CPU."""
+        try:
+            prefs = bpy.context.preferences.addons["cycles"].preferences
+        except (KeyError, AttributeError):
+            return "CPU"
+        for backend in ("OPTIX", "CUDA", "HIP", "ONEAPI", "METAL"):
+            try:
+                prefs.compute_device_type = backend
+            except TypeError:
+                continue
+            prefs.get_devices()
+            usable = [d for d in prefs.devices if d.type == backend]
+            if usable:
+                for d in prefs.devices:
+                    d.use = (d.type == backend)
+                bpy.context.scene.cycles.device = 'GPU'
+                return backend
+        bpy.context.scene.cycles.device = 'CPU'
+        return "CPU"
+
+    def _cycles_settings(self, samples: int) -> None:
+        c = bpy.context.scene.cycles
+        self._set_many(c, (
+            ("samples", samples),
+            ("preview_samples", max(16, samples // 8)),
+            ("use_denoising", True),
+            ("denoiser", 'OPENIMAGEDENOISE'),
+            ("denoising_use_gpu", False),
+            ("use_adaptive_sampling", True),
+            ("adaptive_threshold", 0.01),
+            ("max_bounces", 12),
+            ("diffuse_bounces", 4),
+            ("glossy_bounces", 6),
+            # the car is mostly glass and chrome, so these two carry the look
+            ("transmission_bounces", 12),
+            ("transparent_max_bounces", 12),
+            ("caustics_reflective", False),
+            ("caustics_refractive", False),
+            ("blur_glossy", 1.0),
+            ("seed", self.build_cfg.seed),
+        ))
+        self._enable_gpu()
+
+    def _eevee_settings(self, samples: int) -> None:
+        eevee = bpy.context.scene.eevee
+        for attr in ("taa_render_samples", "taa_samples"):
+            if hasattr(eevee, attr):
+                setattr(eevee, attr, samples)
+        # Clamping indirect light is what stops a glossy dark surface (the
+        # backlight, the black urethane) turning into salt-and-pepper noise.
+        self._set_many(eevee, (
+            ("use_raytracing", True),
+            ("use_shadows", True),
+            ("shadow_ray_count", 2),
+            ("shadow_step_count", 6),
+            ("clamp_surface_indirect", 8.0),
+            ("use_fast_gi", False),
+        ))
+
     def render_settings(self, resolution: tuple[int, int] | None = None,
-                        samples: int | None = None) -> None:
+                        samples: int | None = None,
+                        engine: str | None = None) -> None:
         scn = bpy.context.scene
         r = scn.render
-        r.engine = 'BLENDER_EEVEE'
+
+        engine = (engine or self.build_cfg.engine).lower()
+        r.engine = 'CYCLES' if engine == "cycles" else 'BLENDER_EEVEE'
         res = resolution or self.build_cfg.resolution
         r.resolution_x, r.resolution_y = res
         r.resolution_percentage = 100
         r.image_settings.file_format = 'PNG'
         r.film_transparent = False
 
-        eevee = scn.eevee
         n = samples if samples is not None else self.build_cfg.samples
-        for attr in ("taa_render_samples", "taa_samples"):
-            if hasattr(eevee, attr):
-                setattr(eevee, attr, n)
-        for attr, val in (("use_raytracing", True), ("use_shadows", True),
-                          ("use_bloom", False)):
-            if hasattr(eevee, attr):
-                try:
-                    setattr(eevee, attr, val)
-                except (AttributeError, TypeError):
-                    pass
+        if engine == "cycles":
+            self._cycles_settings(n)
+        else:
+            self._eevee_settings(n)
 
         scn.view_settings.view_transform = 'AgX'
         scn.view_settings.look = 'AgX - Base Contrast'
         scn.view_settings.exposure = self.build_cfg.exposure
-        scn.cycles.seed = self.build_cfg.seed if hasattr(scn, "cycles") else 0
 
     def build(self) -> bpy.types.Object:
         self.world()
         self.lights()
+        self.softboxes()
         self.ground()
         cam = self.camera_rig()
         self.apply_view("hero_front_left")

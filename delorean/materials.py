@@ -29,9 +29,16 @@ def _set(node: bpy.types.Node, key: str, value) -> None:
 
 
 class MaterialLibrary:
-    """Builds every material once and hands them out by key."""
+    """Builds every material once and hands them out by key.
 
-    def __init__(self) -> None:
+    `engine` matters for exactly one thing: glass. Cycles refracts properly, so
+    there the pane is real transmissive glass. EEVEE renders BSDF transmission
+    as an opaque grey panel at the grazing angles a car is actually viewed
+    from, so there it falls back to alpha blending.
+    """
+
+    def __init__(self, engine: str = "eevee") -> None:
+        self.engine = engine.lower()
         self._mats: dict[str, bpy.types.Material] = {}
         self._build()
 
@@ -138,17 +145,50 @@ class MaterialLibrary:
         self._pbr("black_gloss", "BlackGloss", (0.012, 0.012, 0.013), 0.0, 0.14)
         self._pbr("black_matte", "BlackMatte", (0.016, 0.016, 0.018), 0.0, 0.72)
 
+    @staticmethod
+    def _make_transparent(mat: bpy.types.Material) -> None:
+        """Set a material up as see-through glass in EEVEE.
+
+        Alpha blending rather than BSDF transmission, deliberately. EEVEE's
+        raytraced refraction needs DITHERED render mode and still renders the
+        pane as an opaque grey panel at grazing angles, which is exactly the
+        angle a car is photographed from. Alpha is predictable, cheap, and for
+        automotive glass it is also more truthful: at a three-quarter view a
+        windscreen is mostly reflection with the interior faintly behind it.
+        """
+        for attr, value in (("surface_render_method", 'BLENDED'),
+                            ("blend_method", 'BLEND'),
+                            ("show_transparent_back", False),
+                            ("use_backface_culling", False),
+                            ("use_transparent_shadow", True)):
+            if hasattr(mat, attr):
+                try:
+                    setattr(mat, attr, value)
+                except (AttributeError, TypeError):
+                    pass
+
     def _glass(self) -> None:
         mat, bsdf = self._new("Glass")
-        bsdf.inputs["Base Color"].default_value = (0.62, 0.66, 0.68, 1.0)
-        bsdf.inputs["Roughness"].default_value = 0.02
+        bsdf.inputs["Roughness"].default_value = 0.035
         bsdf.inputs["IOR"].default_value = 1.52
-        _set(bsdf, "transmission", 0.92)
-        mat.use_backface_culling = False
+        _set(bsdf, "specular", 0.75)
+
+        if self.engine == "cycles":
+            # real refracting glass, lightly smoked
+            bsdf.inputs["Base Color"].default_value = (0.72, 0.76, 0.78, 1.0)
+            _set(bsdf, "transmission", 0.95)
+            mat.use_backface_culling = False
+        else:
+            # dark and tinted; automotive glass is never colourless
+            bsdf.inputs["Base Color"].default_value = (0.055, 0.070, 0.080, 1.0)
+            bsdf.inputs["Alpha"].default_value = 0.42
+            self._make_transparent(mat)
         self._mats["glass"] = mat
 
-        # the backlight sits under the louvres and reads as near-black
-        self._pbr("glass_dark", "GlassDark", (0.035, 0.038, 0.042), 0.0, 0.09)
+        # The backlight sits under the louvres, so it reads as near-black.
+        # Deliberately a touch rough: a mirror-smooth dark surface is where
+        # EEVEE's raytraced reflections turn into salt-and-pepper noise.
+        self._pbr("glass_dark", "GlassDark", (0.020, 0.022, 0.026), 0.0, 0.22)
 
     def _metals(self) -> None:
         self._pbr("chrome", "Chrome", (0.83, 0.84, 0.86), 1.0, 0.075)

@@ -83,7 +83,9 @@ class BuildConfig:
     build_scene: bool = True               # camera, lights, ground
     validate: bool = True
 
-    # render
+    # render. EEVEE is the fast default the visual tests run on; Cycles is for
+    # finals, and handles glass, metal and contact shadows properly.
+    engine: str = "eevee"                  # "eevee" | "cycles"
     resolution: tuple[int, int] = (1600, 900)
     samples: int = 64
     exposure: float = 0.0                  # calibrated against the studio world

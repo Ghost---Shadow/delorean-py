@@ -100,7 +100,7 @@ class LampBuilder:
     LENS_REAR_DEPTH = 0.012
 
     #: outboard to inboard column colour keys, matching the reference
-    COLUMN_MATERIALS = ("lens_white", "lens_red", "lens_red", "lens_amber")
+    COLUMN_MATERIALS = ("lens_amber", "lens_red", "lens_red", "lens_white")
 
     #: small red marker on the rear fender flank
     MARKER_R_X = 1.90

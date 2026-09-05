@@ -45,21 +45,26 @@ def _clear(nt: bpy.types.NodeTree) -> None:
 
 
 def _gradient(nt: bpy.types.NodeTree, x: int = -900) -> bpy.types.Node:
-    """Dark ground, bright horizon band, soft sky. Returns the colour output."""
+    """Dark ground, bright horizon band, soft sky. Returns the colour output.
+
+    Genuinely high dynamic range: the horizon band peaks well above 1.0, which
+    is what a real sky does and what gives bare metal a highlight with an edge
+    to it. Clamp this to display range and stainless goes flat and plastic.
+    """
     tex = nt.nodes.new("ShaderNodeTexCoord")
     sep = nt.nodes.new("ShaderNodeSeparateXYZ")
     ramp = nt.nodes.new("ShaderNodeValToRGB")
 
     ramp.color_ramp.interpolation = 'EASE'
     e = ramp.color_ramp.elements
-    e[0].position, e[0].color = 0.000, (0.030, 0.032, 0.036, 1.0)
-    e[1].position, e[1].color = 0.470, (0.180, 0.190, 0.210, 1.0)
-    band = ramp.color_ramp.elements.new(0.520)
-    band.color = (1.400, 1.450, 1.520, 1.0)
-    upper = ramp.color_ramp.elements.new(0.630)
-    upper.color = (0.780, 0.820, 0.900, 1.0)
+    e[0].position, e[0].color = 0.000, (0.020, 0.022, 0.026, 1.0)
+    e[1].position, e[1].color = 0.478, (0.130, 0.140, 0.160, 1.0)
+    band = ramp.color_ramp.elements.new(0.516)
+    band.color = (6.500, 6.700, 7.000, 1.0)      # horizon, well above white
+    upper = ramp.color_ramp.elements.new(0.610)
+    upper.color = (1.150, 1.220, 1.380, 1.0)
     zenith = ramp.color_ramp.elements.new(1.000)
-    zenith.color = (1.050, 1.100, 1.200, 1.0)
+    zenith.color = (1.900, 2.050, 2.350, 1.0)
 
     nt.links.new(tex.outputs["Generated"], sep.inputs["Vector"])
     nt.links.new(sep.outputs["Z"], ramp.inputs["Fac"])

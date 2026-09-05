@@ -41,13 +41,18 @@ DOOR_OUTLINE = [
 SPINE_HALF_WIDTH = 0.105
 DOOR_OUTBOARD = 1.350
 
-#: Daylight opening — the window aperture cut out of the door panel.
+#: Daylight opening: the window aperture cut out of the door panel, in the XZ
+#: plane. The top edge has to stay clear of the drip rail all the way forward —
+#: the roof falls away toward the windscreen, so an outline that is merely
+#: "below the roof at the B-pillar" will saw straight through it at the A.
+#: Values are ~50 mm under station z_roof, and ~20 mm above z_shoulder.
 WINDOW_OUTLINE = [
-    (-0.855, 0.905),
-    (-0.640, 1.010),
-    (-0.330, 1.095),
-    ( 0.290, 1.098),
-    ( 0.352, 0.905),
+    (-0.585, 0.900),
+    ( 0.345, 0.905),
+    ( 0.320, 1.080),
+    ( 0.100, 1.088),
+    (-0.150, 1.078),
+    (-0.340, 1.012),
 ]
 
 #: Hinge axis: along X, up at the roof, just outboard of the spine.
@@ -90,6 +95,7 @@ class DoorBuilder:
         self._set_hinge(door, sign)
 
         from .body import zone_body_materials
+        mu.sync()                       # zoning reads matrix_world
         zone_body_materials(door, self.materials)
         mu.shade_smooth(door, 32)
         return door

@@ -147,6 +147,40 @@ def skin_patch(name: str, x0: float, x1: float, u0: float, u1: float,
     return mu.obj_from_pydata(name, verts, faces)
 
 
+def skin_z_at(x: float, y: float) -> float:
+    """Height of the upper skin directly above (x, y).
+
+    The inverse of `skin_point` in the plane: glazing has to be built from its
+    aperture outline in plan, not from the surface parameter, or the pane
+    spills out over the roof.
+    """
+    s = station_at(x)
+    a = abs(y)
+    crown = s.z_roof + Station.ROOF_CROWN
+    if s.y_roof > 1e-6 and a <= s.y_roof:
+        return crown + (s.z_roof - crown) * (a / s.y_roof)
+    span = s.y_glass - s.y_roof
+    if abs(span) < 1e-6:
+        return s.z_roof
+    t = max(0.0, min(1.0, (a - s.y_roof) / span))
+    return s.z_roof + (s.z_shoulder - s.z_roof) * t
+
+
+def polygon_span(poly, u: float) -> tuple[float, float] | None:
+    """Range of the second coordinate inside `poly` at first coordinate `u`."""
+    hits = []
+    n = len(poly)
+    for i in range(n):
+        (a0, b0), (a1, b1) = poly[i], poly[(i + 1) % n]
+        if (a0 - u) * (a1 - u) > 0 or abs(a1 - a0) < 1e-12:
+            continue
+        t = (u - a0) / (a1 - a0)
+        hits.append(b0 + (b1 - b0) * t)
+    if len(hits) < 2:
+        return None
+    return min(hits), max(hits)
+
+
 def flank_half_width(x: float, z: float) -> float:
     """Half-width of the outer skin at height z, at station x. 0 if outside."""
     ring = station_at(x).ring()
@@ -178,20 +212,26 @@ def tail_x(y: float, z: float) -> float:
 
 
 # ------------------------------------------------------------- material zoning
-#: the front bumper's top edge climbs as it runs forward
-_FRONT_BUMPER_X = -1.66
-_REAR_BUMPER_X = 1.64
-_ROCKER_TOP = 0.335
+# The DMC-12 wears bare steel above a black urethane band: rocker mouldings the
+# length of the car, rising into the bumpers at each end. The rise starts well
+# back from the extremities, so the transition reads as a moulding wrapping the
+# corners rather than a black nose and tail.
+_FRONT_BUMPER_X = -1.82
+_REAR_BUMPER_X = 1.86
+_ROCKER_TOP = 0.325
+#: how high the band climbs at each extremity
+_FRONT_BUMPER_TOP = 0.485
+_REAR_BUMPER_TOP = 0.560
 
 
 def is_black_trim(x: float, y: float, z: float) -> bool:
     """True where the shell is black urethane rather than bare steel."""
     if x < _FRONT_BUMPER_X:
-        top = min(0.52, _ROCKER_TOP + (_FRONT_BUMPER_X - x) / 0.40 * 0.185)
-        return z < top
+        t = min(1.0, (_FRONT_BUMPER_X - x) / 0.30)
+        return z < _ROCKER_TOP + t * (_FRONT_BUMPER_TOP - _ROCKER_TOP)
     if x > _REAR_BUMPER_X:
-        top = min(0.655, _ROCKER_TOP + (x - _REAR_BUMPER_X) / 0.40 * 0.330)
-        return z < top
+        t = min(1.0, (x - _REAR_BUMPER_X) / 0.26)
+        return z < _ROCKER_TOP + t * (_REAR_BUMPER_TOP - _ROCKER_TOP)
     return z < _ROCKER_TOP
 
 
