@@ -38,7 +38,8 @@ class TrimBuilder:
     # ------------------------------------------------------------- louvres
     #: the backlight aperture runs x=0.470..1.395 (glazing.BACKLIGHT_PLAN) —
     #: the louvre sits directly over it, so it shares that footprint
-    LOUVRE_X0 = 0.470
+    #: starts behind the roof crest, so the leading slat tucks under it
+    LOUVRE_X0 = 0.520
     LOUVRE_X1 = 1.395
     #: slat count, off the reference crop: 12, comfortably in the 11-13 range
     LOUVRE_SLAT_COUNT = 12
@@ -52,7 +53,10 @@ class TrimBuilder:
     LOUVRE_THICKNESS = 0.012
     #: lift above the skin — clears the backlight glass, which is itself
     #: inset 17 mm into the same surface
-    LOUVRE_Z_OFFSET = 0.040
+    #: The louvre is a shade sitting just off the backlight, not a roof rack.
+    #: At 40 mm it became the tallest thing on the car, broke the silhouette
+    #: above the roof crest, and pushed overall height 30 mm over spec.
+    LOUVRE_Z_OFFSET = 0.013
     LOUVRE_RAIL_WIDTH = 0.028
     LOUVRE_RAIL_SEGMENTS = 6
     LOUVRE_FRAME_THICKNESS = 0.022
