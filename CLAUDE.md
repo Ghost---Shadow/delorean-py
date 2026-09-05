@@ -88,8 +88,23 @@ renders/                 build output (gitignored)
 
 ## 5. No external assets
 
-Every material is procedural nodes. No HDRIs, no image textures, no downloads, no
-linked libraries. The repo must build on a clean machine with nothing but Blender.
+Every material is procedural nodes. **No downloads, no HDRIs, no linked libraries.**
+The repo must build on a clean machine with nothing but Blender and a `git clone`.
+
+The one permitted image input is the committed reference photographs, used as a world
+environment (`delorean/environment.py`). They ship with the repo, so this does not
+break the clean-machine rule. Three caveats, all handled in that module:
+
+- **LDR.** Highlights clip at white, so a photo cannot throw the speculars a true HDRI
+  would. `highlight_boost` re-expands the top of the range.
+- **Not a panorama.** A perspective photo mapped equirectangular puts the ground at the
+  poles. It is blended against the procedural gradient, which supplies the correct
+  vertical luminance structure while the photo supplies colour and variation.
+- **It contains the car.** Downscaled and blended, this reads as surroundings rather
+  than a copy of the subject.
+
+`environment = "procedural"` gives a neutral, photo-free gradient. Metric renders must
+use it — scoring against a photo while reflecting that same photo is circular.
 
 ## 6. Parameterise, don't hardcode
 
@@ -165,13 +180,50 @@ actually scores, then ratchet. Do not invent "IoU >= 0.95" up front.
 | `front-quarter-left-night-doors-open.jpg` | shape reference â€” EV conversion, extra decals |
 | `front-quarter-right-doors-open.jpg` | **excluded** â€” AI-generated/retouched: badge reads "VENS", grille and door cut lines inconsistent |
 
-## 9. Iteration discipline
+## 9. Visual unit tests
 
-Use **isolated rendering** (`delorean/preview.py`) when working on one part. Rendering
-the whole car to check a tail lamp wastes minutes per iteration. Isolate, render small,
-render fast.
+`tests/` is the primary iteration loop. **Every function or class that generates
+geometry gets a test that renders what it produced.**
 
-## 10. Repository hygiene
+```bash
+blender -b -P tests/run_tests.py
+blender -b -P tests/run_tests.py -- --only wheel
+```
+
+Each test does two things:
+
+1. **Asserts** what can be asserted — bounding box against published dimensions, no
+   loose vertices or edges, no zero-area faces, a material on every object, parts
+   inside their expected envelope. These fail the run.
+2. **Renders** the part in isolation, tightly framed, into `renders/tests/`. These are
+   for the eye. A geometry bug is almost never visible in a number and almost always
+   obvious in a picture.
+
+Rules for tests:
+
+- **Build into a fresh scene.** `harness.fresh_scene()` wipes everything, so a test
+  exercises the real construction path rather than poking at an already-built car.
+- **Render from the side the part is meant to be seen from.** A wheel's face points
+  +Y; the hero views all sit on -Y and would show its back. Use the `part_*` views.
+- **Blueprint-blue backdrop.** Dark parts on a black field are unreadable. The backdrop
+  is applied to camera rays only, so the part is still lit and reflects the full studio
+  environment (`Environment(backdrop=...)`).
+- **Small and fast.** 760 px, 24 samples. The whole wheel suite runs in ~3 seconds.
+  If a test takes longer than a couple of seconds, shrink it.
+- **Pair each test with its reference crop.** `references/parts/<group>/<name>.png`,
+  generated from the committed spec by `tools/crop_references.py`. Compare the render
+  against the crop, not against the whole-car photo.
+
+## 10. Iteration discipline
+
+Use **isolated rendering** (`delorean/preview.py`) when working on one part — the
+scripted equivalent of local view. Rendering the whole car to check a tail lamp wastes
+minutes per iteration. Isolate, render small, render fast.
+
+Per-part reference crops live in `references/parts/`, driven by `references/crops.json`
+so they are reproducible. Add a crop when you add a part.
+
+## 11. Repository hygiene
 
 - `delorean.blend` and `renders/` are **build outputs** and are gitignored. The .blend
   is not source; committing it means multi-MB binary diffs on every run.
@@ -179,7 +231,7 @@ render fast.
 - Split code into functions, classes and modules. `build.py` orchestrates and holds no
   geometry.
 
-## 11. Out of scope
+## 12. Out of scope
 
 Clean quad topology (booleans leave ngons/tris â€” fine for rendering, bad for
 subdivision), armatures, animation, UV unwrapping (procedural materials use generated
