@@ -29,12 +29,23 @@ dependency, and environment reflections are low-frequency anyway.
 """
 from __future__ import annotations
 
+import math
 import os
 
 import bpy
 
-REFERENCE_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "references")
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REFERENCE_DIR = os.path.join(_ROOT, "references")
+HDRI_DIR = os.path.join(_ROOT, "assets", "hdri")
+
+#: shortlist mirrored from tools/fetch_hdri.py, at the default 2k
+HDRI_PRESETS = {
+    "studio": "brown_photostudio_02_2k.hdr",
+    "autoshop": "autoshop_01_2k.hdr",
+    "warehouse": "empty_warehouse_01_2k.hdr",
+    "dusk": "evening_road_01_2k.hdr",
+    "outdoor": "kloppenheim_06_2k.hdr",
+}
 
 #: gravel courtyard at dusk — neutral, open sky, nothing lurid
 DEFAULT_REFERENCE = "front-quarter-left-gravel.jpg"
@@ -176,6 +187,50 @@ class Environment:
         nt.links.new(mix.outputs["Shader"], out.inputs["Surface"])
 
     # ------------------------------------------------------------- flavours
+    def hdri(self, path: str, rotation_deg: float = 0.0,
+             strength: float | None = None) -> bpy.types.World:
+        """A real high-dynamic-range environment map.
+
+        This is what the procedural sky is an approximation of. A measured
+        HDRI carries sources thousands of times brighter than mid-grey and,
+        more importantly, *shaped* ones — window frames, strip lights, a sun.
+        Bare stainless is a mirror, so those shapes are what the bodywork
+        actually shows; a smooth gradient has nothing for it to draw.
+
+        Files are downloaded by tools/fetch_hdri.py and are not committed, so
+        this falls back to the procedural sky when the file is missing rather
+        than failing the build.
+        """
+        if not os.path.isabs(path):
+            path = os.path.join(HDRI_DIR, path)
+        if not os.path.exists(path):
+            print(f"  [environment] no HDRI at {path}; using the procedural sky")
+            return self.procedural()
+
+        world, nt = self._world()
+        image = bpy.data.images.get(os.path.basename(path))
+        if image is None:
+            image = bpy.data.images.load(path, check_existing=True)
+
+        tex_co = nt.nodes.new("ShaderNodeTexCoord")
+        mapping = nt.nodes.new("ShaderNodeMapping")
+        env = nt.nodes.new("ShaderNodeTexEnvironment")
+        env.image = image
+        env.projection = 'EQUIRECTANGULAR'
+        env.interpolation = 'Linear'
+        mapping.inputs["Rotation"].default_value = (
+            0.0, 0.0, math.radians(rotation_deg))
+
+        nt.links.new(tex_co.outputs["Generated"], mapping.inputs["Vector"])
+        nt.links.new(mapping.outputs["Vector"], env.inputs["Vector"])
+        for i, node in enumerate((tex_co, mapping, env)):
+            node.location = (-900 + i * 240, 0)
+
+        if strength is not None:
+            self.strength = strength
+        self._finish(nt, env.outputs["Color"])
+        return world
+
     def procedural(self) -> bpy.types.World:
         world, nt = self._world()
         ramp = _gradient(nt)

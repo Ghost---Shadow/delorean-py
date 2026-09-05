@@ -99,7 +99,12 @@ class SceneBuilder:
 
         env = Environment(strength=self.world_strength, backdrop=backdrop)
         cfgb = self.build_cfg
-        if cfgb.environment == "reference":
+        if cfgb.environment == "hdri":
+            from .environment import HDRI_PRESETS
+            name = HDRI_PRESETS.get(cfgb.environment_hdri,
+                                    cfgb.environment_hdri)
+            env.hdri(name, rotation_deg=cfgb.environment_rotation_deg)
+        elif cfgb.environment == "reference":
             env.from_reference(cfgb.environment_reference,
                                photo_mix=cfgb.environment_photo_mix,
                                rotation_deg=cfgb.environment_rotation_deg)
@@ -184,7 +189,15 @@ class SceneBuilder:
             "Ground",
             [(-s, -s, 0.0), (s, -s, 0.0), (s, s, 0.0), (-s, s, 0.0)],
             [(0, 1, 2, 3)])
-        mu.set_material(plane, self.materials["ground"])
+        # Under an HDRI the floor is part of the photograph, so a grey plane
+        # over it just hides the environment. Keep it as a shadow catcher: it
+        # takes the contact shadow that grounds the car and is otherwise
+        # invisible.
+        if self.build_cfg.environment == "hdri":
+            mu.set_material(plane, self.materials["ground"])
+            self._set_many(plane, (("is_shadow_catcher", True),))
+        else:
+            mu.set_material(plane, self.materials["ground"])
         return plane
 
     # ---------------------------------------------------------------- camera
@@ -354,8 +367,12 @@ class SceneBuilder:
 
     def build(self) -> bpy.types.Object:
         self.world()
-        self.lights()
-        self.softboxes()
+        # A measured HDRI already contains the studio. Leaving the synthetic
+        # lamps and softboxes switched on underneath one washes out exactly the
+        # shaped reflections it was fetched for.
+        if self.build_cfg.environment != "hdri":
+            self.lights()
+            self.softboxes()
         self.ground()
         cam = self.camera_rig()
         self.apply_view("hero_front_left")

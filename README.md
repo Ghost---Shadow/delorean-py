@@ -41,6 +41,9 @@ Blender's bundled interpreter needs nothing extra. The metrics run outside it.
 ## Usage
 
 ```bash
+# optional: fetch CC0 HDRI environments (not committed)
+python tools/fetch_hdri.py
+
 # build the model, headless
 blender -b -P build.py
 
@@ -50,9 +53,18 @@ blender -b -P build.py -- --render
 # build with the doors open and the wheels turned
 blender -b -P build.py -- --doors 52 --steer 12
 
+# hero render in a real HDRI environment
+blender -b -P build.py -- --engine cycles --environment hdri --hdri warehouse     --render --views hero_front_left
+
+# write a self-contained delorean.blend (gitignored build output)
+blender -b -P build.py -- --engine cycles --environment hdri --save
+
 # score the current build against the reference photographs
 python -m metrics.score
 ```
+
+HDRI presets: `studio`, `autoshop`, `warehouse`, `dusk`, `outdoor`. Rotate one with
+`--hdri-rotation`.
 
 To work on it interactively, open Blender and re-exec `build.py` from the scripting
 workspace. The script fully resets the scene on every run, so there is no stale state to

@@ -142,8 +142,20 @@ class DeLoreanBuild:
         return written
 
     def save(self, path: str = "delorean.blend") -> str:
+        """Write the .blend, with any external images packed into it.
+
+        The HDRI lives in gitignored assets/, so an unpacked .blend would open
+        with a missing texture on any other machine. Packing makes the file
+        stand alone.
+        """
         full = os.path.join(_ROOT, path)
+        try:
+            bpy.ops.file.pack_all()
+        except RuntimeError as exc:
+            print(f"  could not pack external files: {exc}")
         bpy.ops.wm.save_as_mainfile(filepath=full)
+        size = os.path.getsize(full) / 1e6
+        print(f"  saved {os.path.relpath(full, _ROOT)} ({size:.1f} MB)")
         return full
 
 
@@ -156,8 +168,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                     help="front wheel steering angle in degrees")
     ap.add_argument("--clay", action="store_true",
                     help="flat grey override, for shape-only renders")
-    ap.add_argument("--environment", choices=("reference", "procedural"),
+    ap.add_argument("--environment",
+                    choices=("hdri", "reference", "procedural"),
                     default="reference")
+    ap.add_argument("--hdri", default="studio",
+                    help="preset (studio/autoshop/warehouse/dusk/outdoor) "
+                         "or a filename under assets/hdri/")
+    ap.add_argument("--hdri-rotation", type=float, default=0.0)
     ap.add_argument("--engine", choices=("eevee", "cycles"), default="eevee",
                     help="eevee is fast; cycles is for finals")
     ap.add_argument("--render", action="store_true")
@@ -178,6 +195,8 @@ def main(argv: list[str] | None = None) -> DeLoreanBuild:
         clay=args.clay,
         engine=args.engine,
         environment=args.environment,
+        environment_hdri=args.hdri,
+        environment_rotation_deg=args.hdri_rotation,
         resolution=(int(w), int(h)),
         samples=args.samples,
     )).run()
@@ -186,7 +205,7 @@ def main(argv: list[str] | None = None) -> DeLoreanBuild:
         names = [v.strip() for v in args.views.split(",") if v.strip() in VIEWS]
         build.render_views(names)
     if args.save:
-        print(f"  saved {build.save()}")
+        build.save()
     return build
 
 

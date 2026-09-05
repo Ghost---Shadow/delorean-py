@@ -116,7 +116,8 @@ class BuildConfig:
     # world. "procedural" is a neutral luminance gradient; "reference" reflects
     # one of the committed photographs, so the steel picks up the same
     # surroundings that lit the real car.
-    environment: str = "reference"
+    environment: str = "reference"       # "hdri" | "procedural" | "reference"
+    environment_hdri: str = "warehouse"  # preset name, or a filename/path
     environment_reference: str = "front-quarter-left-gravel.jpg"
     environment_strength: float = 1.0
     environment_photo_mix: float = 0.62

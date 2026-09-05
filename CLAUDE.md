@@ -108,9 +108,26 @@ renders/                 build output (gitignored)
 Every material is procedural nodes. **No downloads, no HDRIs, no linked libraries.**
 The repo must build on a clean machine with nothing but Blender and a `git clone`.
 
-The one permitted image input is the committed reference photographs, used as a world
-environment (`delorean/environment.py`). They ship with the repo, so this does not
-break the clean-machine rule. Three caveats, all handled in that module:
+Two image inputs are permitted, neither of them committed source:
+
+**Reference photographs**, used as a world environment (`delorean/environment.py`).
+They ship with the repo, so this does not break the clean-machine rule.
+
+**HDRI environment maps**, fetched by `tools/fetch_hdri.py` into `assets/hdri/`,
+which is gitignored. What is committed is the fetch script and its shortlist, so a
+clean clone reproduces the same environments with one command. The build falls back
+to the procedural sky when a file is missing, so nothing here is required to render.
+Sources are [Poly Haven](https://polyhaven.com), CC0 — commercial use and
+redistribution permitted, attribution not required, but recorded in
+`assets/hdri/CREDITS.md` anyway.
+
+An HDRI is not a nicety. Bare stainless is a mirror, so what the bodywork shows is
+whatever is around it; a measured environment carries sources thousands of times
+brighter than mid-grey and, more to the point, *shaped* ones — window frames, strip
+lights, a sun. A smooth gradient gives the panels nothing to draw. When
+`environment = "hdri"` the synthetic lamps and softboxes are switched off and the
+ground becomes a shadow catcher, because leaving a fake studio on underneath a real
+one washes out exactly the reflections it was fetched for. Three caveats, all handled in that module:
 
 - **LDR.** Highlights clip at white, so a photo cannot throw the speculars a true HDRI
   would. `highlight_boost` re-expands the top of the range.
