@@ -219,6 +219,34 @@ telephoto pose. Until it optimises true in-frame IoU after fitting distance, the
 scores measure camera mismatch rather than model fidelity, and must not be
 quoted as a fidelity figure. `metrics/baseline.json` records this.
 
+### Wireframe overlay — reading misproportion by eye
+
+Before the metrics mean anything, the camera has to match. This shows whether it
+does, and separates that question from the model's shape:
+
+```bash
+blender -b -P metrics/render_wireframe.py -- --reference <stem> [--azimuth N --elevation N --lens N --distance N --door-angle N]
+python -m metrics.overlay_edges --reference <stem> --ghost
+```
+
+The reference goes through Canny and is drawn in grey; the model is rendered as a
+true hidden-line wireframe and drawn in red over it, with agreement in green. Two
+images come out:
+
+- `*.overlay.png` — both at their true positions. Answers *is the camera right*.
+- `*.overlay-fit.png` — the wireframe scaled **uniformly** and centred on the
+  reference's bounding box. Answers *is the shape right*. The scale is uniform on
+  purpose: stretching each axis to fit would erase the error being looked for, so
+  a height that over- or undershoots after fitting is real, and the printed aspect
+  figures put a number on it.
+
+The wireframe is built as geometry (a Wireframe modifier, black tubes over white
+surfaces) rather than with Workbench or Freestyle. Workbench's WIREFRAME shading
+is viewport-only in practice — it writes no alpha, and its `wireframe_color_type`
+does not take in a final render, so lines come out one level off the background.
+Building the wire as real geometry also gives hidden-line removal for free, which
+is what makes it comparable to a Canny map of a photograph.
+
 ### Reference triage
 
 | File | Use |
