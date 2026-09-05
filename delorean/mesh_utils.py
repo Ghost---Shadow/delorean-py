@@ -10,7 +10,7 @@ from typing import Callable, Iterable, Sequence
 
 import bmesh
 import bpy
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 Vec2 = tuple[float, float]
 Vec3 = tuple[float, float, float]
@@ -407,8 +407,16 @@ def duplicate(ob: bpy.types.Object, name: str) -> bpy.types.Object:
 
 
 def set_origin(ob: bpy.types.Object, point: Vec3) -> None:
-    """Move the origin to a world-space point, leaving geometry where it is."""
-    ob.data.transform(Matrix.Translation((-point[0], -point[1], -point[2])))
+    """Move the origin to a world-space point, leaving geometry where it is.
+
+    The mesh is shifted by however far the origin actually travels, which is
+    the difference between the requested point and where the object already
+    sits. Translating by `-point` alone only works while the object's location
+    is still zero, and silently drags the geometry by the object's own offset
+    when it is not.
+    """
+    offset = Vector(point) - ob.location
+    ob.data.transform(Matrix.Translation(-offset))
     ob.location = point
 
 

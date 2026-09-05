@@ -112,6 +112,23 @@ that is actually correct. IoU is the honest number; the rest are diagnostics.
 Baselines live in `metrics/baseline.json` and are measured, not invented — set from what
 an honest build actually scores, then ratcheted upward.
 
+## Tests
+
+Every function that generates geometry has a test that renders what it produced —
+a geometry bug is almost never visible in a number and almost always obvious in a
+picture. The renders land in `renders/tests/`, on a blueprint-blue backdrop so dark
+parts are readable.
+
+```bash
+blender -b -P tests/run_tests.py
+blender -b -P tests/run_tests.py -- --only doors
+python tools/coverage.py                          # which callables have no test
+```
+
+61 tests across 8 modules, about 20 seconds for the lot. Three fail on purpose,
+because they describe defects that are real and unfixed; they are listed in
+[CLAUDE.md](CLAUDE.md#known-failures) rather than deleted.
+
 ## Design notes
 
 **Why lofted cross-sections.** The DMC-12 is a wedge with hard creases, not a set of

@@ -264,6 +264,47 @@ Rules for tests:
   generated from the committed spec by `tools/crop_references.py`. Compare the render
   against the crop, not against the whole-car photo.
 
+### Coverage
+
+"Every geometry function gets a test" is easy to say and easy to drift from, so it
+is measured:
+
+```bash
+python tools/coverage.py                 # geometry modules
+python tools/coverage.py --all           # support modules too
+python tools/coverage.py --fail-under 90
+```
+
+Pure AST, system Python, no Blender. It reports the public callables in each module
+against the names referenced by the test files that import it — scoped per module,
+because matching names globally lets `BodyBuilder.build` in one test file mark
+`TrimBuilder.build` covered in another and the figure climbs while the module goes
+untested.
+
+It measures **reach, not quality**. A name referenced by a failing test still counts,
+and a callable reached only indirectly reads as uncovered (`TrimBuilder.build` is the
+standing example: `build_trim` calls it, and the trim tests call `build_trim`). Use it
+as a checklist of blind spots; the suite itself is the judge of whether anything works.
+
+Support modules — `scene`, `preview`, `materials`, `environment`, `validate` — are
+reported but never gated. A camera rig has no silhouette to render, and every test that
+stands up a scene exercises them indirectly. **`validate.py` is the exception worth
+fixing**: it gates every build and has no test of its own, and it currently prints the
+two doors' polygon counts without comparing them, which is how the defect below went
+unnoticed.
+
+### Known failures
+
+Tests that fail on purpose, because they describe a real defect that has not been fixed:
+
+| Test | What it catches |
+|---|---|
+| `door_panel_watertight` | `Door_R` has 3 non-manifold edges in the sill at z = 0.300, and 103 faces against the left door's 104. The two panels are cut with mirrored copies of one outline, so the difference is the EXACT solver behaving differently on the two sides. Suggested fix: build one door and mirror it with `mesh_utils.mirror_object_y`, which makes the pair identical by construction and halves the boolean work. |
+| `interior_seats`, `interior_full` | A seat vertex sits 18 mm below the tub floor. |
+
+Do not delete a failing test to make the run green. Either fix the defect or record it
+here.
+
 ## 10. Iteration discipline
 
 Use **isolated rendering** (`delorean/preview.py`) when working on one part — the
