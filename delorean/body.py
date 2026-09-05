@@ -218,9 +218,23 @@ class BodyBuilder:
     def build(self) -> bpy.types.Object:
         body = mu.loft("Body", [s.ring() for s in STATIONS])
         mu.mirror_y(body)
+        self._require_solid(body, "after mirror")
+
         self._cut_arches(body)
-        mu.solidify(body, cfg.BODY_PANEL_THICKNESS, offset=-1.0)
+        self._require_solid(body, "after wheel arches")
+
+        mu.solidify(body, cfg.BODY_PANEL_THICKNESS, offset=-1.0, even=False)
+        self._require_solid(body, "after solidify")
         return body
+
+    @staticmethod
+    def _require_solid(ob: bpy.types.Object, stage: str) -> None:
+        ok, detail = mu.is_solid(ob)
+        if not ok:
+            raise RuntimeError(
+                f"body shell is not a valid solid {stage}: {detail}. "
+                f"Every later boolean depends on this, so failing here beats "
+                f"producing a car with one side missing.")
 
     def _cut_arches(self, body: bpy.types.Object) -> None:
         depth = self.ARCH_OUTBOARD - self.ARCH_INBOARD

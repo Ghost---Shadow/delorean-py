@@ -71,7 +71,9 @@ def loft(name: str, rings: Sequence[Sequence[Vec3]], cap_first: bool = True,
     if cap_last:
         base = (len(rings) - 1) * n
         faces.append(tuple(range(base, base + n)))
-    return obj_from_pydata(name, verts, faces)
+    ob = obj_from_pydata(name, verts, faces)
+    recalc_normals(ob, outward=False)
+    return ob
 
 
 def prism(name: str, poly: Sequence[Vec2], lo: float, hi: float,
@@ -97,7 +99,12 @@ def prism(name: str, poly: Sequence[Vec2], lo: float, hi: float,
     for i in range(n):
         j = (i + 1) % n
         faces.append((i, j, j + n, i + n))
-    return obj_from_pydata(name, verts, faces)
+    ob = obj_from_pydata(name, verts, faces)
+    # The caller's polygon may be wound either way, and a prism with inward
+    # normals turns a DIFFERENCE into "keep only the cutter" — which deletes
+    # the car. Force outward.
+    recalc_normals(ob, outward=True)
+    return ob
 
 
 def offset_poly(poly: Sequence[Vec2], amount: float) -> list[Vec2]:
@@ -169,6 +176,7 @@ def box(name: str, size: Vec3, location: Vec3 = (0, 0, 0)) -> bpy.types.Object:
     faces = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
              (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
     ob = obj_from_pydata(name, verts, faces)
+    recalc_normals(ob, outward=True)
     ob.location = location
     return ob
 
@@ -201,19 +209,110 @@ def apply_modifiers(ob: bpy.types.Object) -> None:
             ob.modifiers.remove(m)
 
 
-def boolean(ob: bpy.types.Object, cutter: bpy.types.Object,
-            operation: str = 'DIFFERENCE', apply: bool = True,
-            delete_cutter: bool = True) -> bpy.types.Object:
+class BooleanError(RuntimeError):
+    """A boolean produced a result that cannot be right."""
+
+
+def _boolean_once(ob, cutter, operation, solver):
     md = ob.modifiers.new(operation.lower(), 'BOOLEAN')
     md.operation = operation
     md.object = cutter
-    md.solver = 'EXACT'
-    if apply:
-        activate(ob)
-        bpy.ops.object.modifier_apply(modifier=md.name)
-        if delete_cutter:
-            bpy.data.objects.remove(cutter, do_unlink=True)
-    return ob
+    md.solver = solver
+    activate(ob)
+    bpy.ops.object.modifier_apply(modifier=md.name)
+    return len(ob.data.polygons)
+
+
+def _looks_wrong(before: int, after: int, operation: str, min_polys: int) -> str:
+    if after < min_polys:
+        return f"left {after} polygons (was {before})"
+    if operation == 'DIFFERENCE' and after < before * 0.25:
+        pct = 100 * (1 - after / before)
+        return f"removed {pct:.0f}% of the mesh ({before} -> {after} polygons)"
+    return ""
+
+
+def boolean(ob: bpy.types.Object, cutter: bpy.types.Object,
+            operation: str = 'DIFFERENCE', apply: bool = True,
+            delete_cutter: bool = True, min_polys: int = 4,
+            solvers: tuple[str, ...] = ('EXACT', 'FLOAT')) -> bpy.types.Object:
+    """Apply a boolean, and refuse to let a silent failure through.
+
+    Booleans fail quietly: an inverted cutter turns a DIFFERENCE into "keep
+    only the cutter", and an inside-out target makes an INTERSECT return
+    nothing. Both leave a valid mesh behind, so nothing downstream notices
+    until the render looks wrong.
+
+    So the result is checked, and if it is obviously wrong the mesh is rolled
+    back and the next solver is tried. EXACT is correct more often; FLOAT
+    copes with the near-tangent cutters that EXACT refuses (the quarter window
+    lies almost flat against the sail panel, and EXACT collapses the whole
+    body on it). The order is fixed, so the build stays deterministic.
+    """
+    if not apply:
+        md = ob.modifiers.new(operation.lower(), 'BOOLEAN')
+        md.operation = operation
+        md.object = cutter
+        md.solver = solvers[0]
+        return ob
+
+    before = len(ob.data.polygons)
+    backup = ob.data.copy()
+    problem = ""
+
+    for solver in solvers:
+        after = _boolean_once(ob, cutter, operation, solver)
+        problem = _looks_wrong(before, after, operation, min_polys)
+        if not problem:
+            bpy.data.meshes.remove(backup)
+            if delete_cutter:
+                bpy.data.objects.remove(cutter, do_unlink=True)
+            return ob
+        # roll back and try the next solver
+        spoiled, ob.data = ob.data, backup.copy()
+        bpy.data.meshes.remove(spoiled)
+
+    bpy.data.meshes.remove(backup)
+    if delete_cutter:
+        bpy.data.objects.remove(cutter, do_unlink=True)
+    raise BooleanError(
+        f"{operation} on {ob.name!r} {problem}; tried {', '.join(solvers)}. "
+        f"The cutter is probably inverted, degenerate, or misses the target.")
+
+
+def recalc_normals(ob: bpy.types.Object, outward: bool = True) -> float:
+    """Make face winding consistent, and outward for a closed solid.
+
+    This is not cosmetic. Blender's exact boolean solver decides what is inside
+    a mesh from its winding, so a solid whose halves disagree will intersect
+    correctly on one side and return nothing on the other. Returns the signed
+    volume, which is positive once the mesh is a properly oriented solid.
+    """
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    volume = bm.calc_volume(signed=True)
+    if outward and volume < 0.0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+        volume = -volume
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    return volume
+
+
+def is_solid(ob: bpy.types.Object) -> tuple[bool, str]:
+    """True if the mesh is a closed, consistently wound, outward-facing solid."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    open_edges = sum(1 for e in bm.edges if not e.is_manifold)
+    volume = bm.calc_volume(signed=True)
+    bm.free()
+    if open_edges:
+        return False, f"{open_edges} non-manifold edges"
+    if volume <= 0.0:
+        return False, f"signed volume {volume:+.5f} (inside-out)"
+    return True, f"closed solid, volume {volume:.5f}"
 
 
 def mirror_y(ob: bpy.types.Object, merge: float = 0.001) -> bpy.types.Object:
@@ -222,15 +321,27 @@ def mirror_y(ob: bpy.types.Object, merge: float = 0.001) -> bpy.types.Object:
     md.use_clip = True
     md.merge_threshold = merge
     apply_modifiers(ob)
+    # the mirrored half comes out with opposite winding; leaving it that way
+    # silently breaks every later boolean on that side
+    recalc_normals(ob)
     return ob
 
 
 def solidify(ob: bpy.types.Object, thickness: float, offset: float = -1.0,
-             apply: bool = True) -> bpy.types.Object:
+             even: bool = False, apply: bool = True) -> bpy.types.Object:
+    """Give a closed surface panel thickness.
+
+    `even` (Blender's "Even Thickness") scales the inset by 1/cos at each
+    crease so corners keep their nominal thickness. On a body with creases as
+    sharp as this one that overshoots badly: the inner surface self-intersects,
+    and the result — while still reporting as a closed manifold — makes the
+    exact boolean solver treat one half of the car as inside-out, so door cuts
+    silently return nothing on that side. Leave it off.
+    """
     md = ob.modifiers.new("Solidify", 'SOLIDIFY')
     md.thickness = thickness
     md.offset = offset
-    md.use_even_offset = True
+    md.use_even_offset = even
     if apply:
         apply_modifiers(ob)
     return ob

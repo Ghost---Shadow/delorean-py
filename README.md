@@ -124,5 +124,5 @@ validation rules.
 
 ## Licence
 
-Model code MIT. Reference photographs are the property of their respective owners and are
-included for shape comparison only.
+Model code is Apache 2.0 (see [LICENSE](LICENSE)). Reference photographs are the
+property of their respective owners and are included for shape comparison only.

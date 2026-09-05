@@ -104,7 +104,7 @@ break the clean-machine rule. Three caveats, all handled in that module:
   than a copy of the subject.
 
 `environment = "procedural"` gives a neutral, photo-free gradient. Metric renders must
-use it — scoring against a photo while reflecting that same photo is circular.
+use it â€” scoring against a photo while reflecting that same photo is circular.
 
 ## 6. Parameterise, don't hardcode
 
@@ -192,7 +192,7 @@ blender -b -P tests/run_tests.py -- --only wheel
 
 Each test does two things:
 
-1. **Asserts** what can be asserted — bounding box against published dimensions, no
+1. **Asserts** what can be asserted â€” bounding box against published dimensions, no
    loose vertices or edges, no zero-area faces, a material on every object, parts
    inside their expected envelope. These fail the run.
 2. **Renders** the part in isolation, tightly framed, into `renders/tests/`. These are
@@ -216,7 +216,7 @@ Rules for tests:
 
 ## 10. Iteration discipline
 
-Use **isolated rendering** (`delorean/preview.py`) when working on one part — the
+Use **isolated rendering** (`delorean/preview.py`) when working on one part â€” the
 scripted equivalent of local view. Rendering the whole car to check a tail lamp wastes
 minutes per iteration. Isolate, render small, render fast.
 
