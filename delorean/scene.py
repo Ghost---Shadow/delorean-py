@@ -48,14 +48,19 @@ class View:
     ortho_scale: float = 5.0
 
 
+# Azimuth is measured about +Z from the +X axis. The nose points -X and the
+# car's left is +Y, so a view of the front and the car's left flank sits
+# between 90 and 180 degrees. Getting this backwards names every hero shot
+# after the wrong side of the car.
 VIEWS: dict[str, View] = {
-    "hero_front_left":  View(210.0, 10.0, 11.0, lens=78.0),
-    "hero_front_right": View(150.0, 10.0, 11.0, lens=78.0),
-    "hero_rear_left":   View(330.0, 13.0, 11.0, lens=78.0),
-    "hero_rear_right":  View( 30.0, 13.0, 11.0, lens=78.0),
+    "hero_front_left":  View(145.0, 10.0, 11.0, lens=78.0),
+    "hero_front_right": View(215.0, 10.0, 11.0, lens=78.0),
+    "hero_rear_left":   View( 35.0, 13.0, 11.0, lens=78.0),
+    "hero_rear_right":  View(325.0, 13.0, 11.0, lens=78.0),
     "front":            View(180.0,  4.0, 14.0, lens=110.0),
     "rear":             View(  0.0,  4.0, 14.0, lens=110.0),
     "side":             View( 90.0,  0.0, 16.0, ortho=True, ortho_scale=4.8),
+    "side_right":       View(270.0,  0.0, 16.0, ortho=True, ortho_scale=4.8),
     "top":              View( 90.0, 89.5, 16.0, ortho=True, ortho_scale=4.8),
     "ortho_front":      View(180.0,  0.0, 16.0, ortho=True, ortho_scale=2.4),
 

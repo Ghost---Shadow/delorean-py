@@ -1,0 +1,50 @@
+{
+  "_comment": "Seed regions for tools/make_masks.py. Normalised coords. 'scored' marks references trustworthy enough to gate on.",
+  "masks": [
+    {
+      "src": "studio-front-quarter-door-open.jpg",
+      "method": "neutral",
+      "scored": true,
+      "box": [
+        0.03,
+        0.04,
+        0.985,
+        0.935
+      ],
+      "saturation": 62,
+      "iterations": 6
+    },
+    {
+      "src": "front-quarter-left-gravel.jpg",
+      "method": "bands",
+      "scored": true,
+      "box": [
+        0.105,
+        0.33,
+        0.935,
+        0.79
+      ],
+      "bg_top": 0.255,
+      "bg_bottom": 0.872,
+      "bg_left": 0.006,
+      "bg_right": 0.994,
+      "iterations": 10
+    },
+    {
+      "src": "rear-quarter-right-doors-open.jpg",
+      "method": "bands",
+      "scored": true,
+      "box": [
+        0.08,
+        0.23,
+        0.93,
+        0.8
+      ],
+      "bg_top": 0.15,
+      "bg_bottom": 0.86,
+      "bg_left": 0.01,
+      "bg_right": 0.99,
+      "iterations": 8
+    }
+  ]
+}

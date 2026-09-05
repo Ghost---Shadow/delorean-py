@@ -169,6 +169,22 @@ fixed seed. Never score a beauty render.
 Baselines live in `metrics/baseline.json`. Set targets from what an honest build
 actually scores, then ratchet. Do not invent "IoU >= 0.95" up front.
 
+### Running it
+
+```bash
+python tools/make_masks.py                                    # car masks
+blender -b -P metrics/solve_camera.py -- --reference <stem>   # solve the camera
+blender -b -P metrics/render_solved.py -- --reference <stem>  # clay render
+python -m metrics.score                                       # scorecard + overlays
+```
+
+**Current status: the camera solve is not converging.** It optimises an IoU that
+is deliberately blind to framing (bounding-box cropped, width-normalised), and
+on a three-quarter reference that objective is maximised by a near-side-on
+telephoto pose. Until it optimises true in-frame IoU after fitting distance, the
+scores measure camera mismatch rather than model fidelity, and must not be
+quoted as a fidelity figure. `metrics/baseline.json` records this.
+
 ### Reference triage
 
 | File | Use |

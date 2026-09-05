@@ -1,0 +1,36 @@
+{
+  "gate_iou": 0.7,
+  "views": {
+    "front-quarter-left-gravel": {
+      "silhouette_iou": 0.32628,
+      "silhouette_dice": 0.49202,
+      "chamfer_px": 56.6493,
+      "chamfer_normalised": 0.05237,
+      "boundary_f1": 0.02923,
+      "boundary_precision": 0.145,
+      "boundary_recall": 0.01625,
+      "edge_psnr_db": 17.29882,
+      "edge_mse": 1211.15083,
+      "width": 900,
+      "height": 600,
+      "camera": {
+        "reference": "front-quarter-left-gravel",
+        "azimuth": 252.0,
+        "elevation": 1.5,
+        "lens": 49.2,
+        "distance": 11.97709497206704,
+        "target_z": 0.62,
+        "iou": 0.6399348666802361,
+        "door_angle_deg": 0.0,
+        "render_width": 260,
+        "aspect": 0.6664956387891227
+      }
+    }
+  },
+  "_status": "FAILING. The camera solve converges to a near-side-on view for a three-quarter reference, so these numbers measure camera mismatch, not model fidelity. Fix the solve before reading anything into the scores.",
+  "_known_issues": [
+    "solve_camera optimises a framing-invariant IoU; it needs to optimise true in-frame IoU after fitting distance, or a near-side-on pose wins",
+    "fit_distance returns a distance that leaves the car too small in frame",
+    "the gravel mask clips the black front bumper, biasing the silhouette"
+  ]
+}
