@@ -46,17 +46,34 @@ replaces it, Principled BSDF socket names changed (`Specular` -> `Specular IOR L
 | Ground plane | Z = 0, wheels contact it exactly |
 | Origin | world centre, midway between the axles |
 
-Ground truth dimensions (real DMC-12, millimetres):
+Ground truth dimensions (real DMC-12, millimetres), sourced not remembered:
 
-| | |
-|---|---|
-| Length | 4267 |
-| Width | 1988 |
-| Height | 1140 |
-| Wheelbase | 2413 |
-| Front track / rear track | 1588 / 1605 |
-| Front wheel | 195/60R14 (589.6 mm dia) |
-| Rear wheel | 235/60R15 (663.0 mm dia) |
+| | | |
+|---|---|---|
+| Length | 4267 | 168.0 in |
+| Width (doors closed) | **1857** | 73.1 in |
+| Height (doors closed) | 1140 | 44.88 in |
+| Height (doors open, over mirror) | 1962 | 77.2 in |
+| Wheelbase | 2413 | 95.0 in |
+| Track front / rear | 1590 / 1588 | 62.6 / 62.5 in |
+| Ground clearance front / rear | 142 / 155 | 5.6 / 6.1 in |
+| Front wheel | 195/60R14 on 14x6 | 589.6 mm dia |
+| Rear wheel | 235/60R15 on 15x8 | 663.0 mm dia |
+| Kerb weight | 1233 kg | 38/62 front/rear |
+
+Primary source is the factory dimension diagram as transcribed by
+[DeLorean Directory](https://www.deloreandirectory.com/specs/) — its A–J letter
+codes are the callouts on that drawing — cross-checked against
+[Wikipedia](https://en.wikipedia.org/wiki/DMC_DeLorean) and
+[UltimateSpecs](https://www.ultimatespecs.com/car-specs/Delorean/17644/Delorean-DMC-12-.html).
+
+**Width is the trap.** Wikipedia says 1,988 mm (78.3 in) and it is the outlier:
+the factory diagram gives 73.1 in, UltimateSpecs 72.83 in, conceptcarz 73.1 in
+and cardealerships 73.00 in — all ~1,850–1,857 mm. The narrower figure is also
+what the photographs support, since the rear tyres sit very nearly flush with the
+bodyside on a real car, which only works with ~1,857 mm of body over a 1,588 mm
+rear track. Length is the other soft spot: the factory diagram says 166 in
+(4,216 mm) against the widely published 168 in.
 
 **Published dimensions are the hard ground truth. Reference photographs are shape
 confirmation, not measurement.** None of the references is orthographic, so none of

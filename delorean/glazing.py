@@ -20,14 +20,14 @@ from .body import flank_half_width, polygon_span, skin_z_at
 #: Windscreen aperture, in plan. Sits inside the A-pillars, and stops short of
 #: x = -0.20 so the header between it and the door cut stays 130 mm wide.
 WINDSCREEN_PLAN = [
-    (-0.995,  0.470), (-0.880,  0.575), (-0.470,  0.565), (-0.330,  0.455),
-    (-0.330, -0.455), (-0.470, -0.565), (-0.880, -0.575), (-0.995, -0.470),
+    (-0.995, 0.439), (-0.880, 0.537), (-0.470, 0.528), (-0.330, 0.425),
+    (-0.330, -0.425), (-0.470, -0.528), (-0.880, -0.537), (-0.995, -0.439),
 ]
 
 #: Backlight aperture, in plan. The louvres sit over this.
 BACKLIGHT_PLAN = [
-    ( 0.470,  0.520), ( 0.560,  0.545), ( 1.300,  0.470), ( 1.395,  0.420),
-    ( 1.395, -0.420), ( 1.300, -0.470), ( 0.560, -0.545), ( 0.470, -0.520),
+    (0.470, 0.486), (0.560, 0.509), (1.300, 0.439), (1.395, 0.392),
+    (1.395, -0.392), (1.300, -0.439), (0.560, -0.509), (0.470, -0.486),
 ]
 
 #: Quarter window in the sail panel, behind the door, in the XZ plane.

@@ -223,12 +223,35 @@ def _boolean_once(ob, cutter, operation, solver):
     return len(ob.data.polygons)
 
 
-def _looks_wrong(before: int, after: int, operation: str, min_polys: int) -> str:
+def _bounds(ob: bpy.types.Object) -> tuple[float, ...]:
+    if not ob.data.vertices:
+        return (0.0,) * 6
+    xs = [v.co.x for v in ob.data.vertices]
+    ys = [v.co.y for v in ob.data.vertices]
+    zs = [v.co.z for v in ob.data.vertices]
+    return (min(xs), min(ys), min(zs), max(xs), max(ys), max(zs))
+
+
+def _looks_wrong(before: int, after: int, operation: str, min_polys: int,
+                 bounds_before=None, bounds_after=None, slack: float = 0.002) -> str:
     if after < min_polys:
         return f"left {after} polygons (was {before})"
     if operation == 'DIFFERENCE' and after < before * 0.25:
         pct = 100 * (1 - after / before)
         return f"removed {pct:.0f}% of the mesh ({before} -> {after} polygons)"
+    # Neither DIFFERENCE nor INTERSECT can make a mesh bigger. If the result
+    # grew, the solver merged the cutter in instead of subtracting it - which
+    # is what the FLOAT fallback does when the operands barely touch.
+    if bounds_before and bounds_after:
+        for i in range(3):
+            if bounds_after[i] < bounds_before[i] - slack:
+                return (f"grew along {'XYZ'[i]} (min {bounds_before[i]:.3f} -> "
+                        f"{bounds_after[i]:.3f}); the cutter was merged in, "
+                        f"not applied")
+            if bounds_after[i + 3] > bounds_before[i + 3] + slack:
+                return (f"grew along {'XYZ'[i]} (max {bounds_before[i + 3]:.3f} "
+                        f"-> {bounds_after[i + 3]:.3f}); the cutter was merged "
+                        f"in, not applied")
     return ""
 
 
@@ -257,12 +280,14 @@ def boolean(ob: bpy.types.Object, cutter: bpy.types.Object,
         return ob
 
     before = len(ob.data.polygons)
+    bounds_before = _bounds(ob)
     backup = ob.data.copy()
     problem = ""
 
     for solver in solvers:
         after = _boolean_once(ob, cutter, operation, solver)
-        problem = _looks_wrong(before, after, operation, min_polys)
+        problem = _looks_wrong(before, after, operation, min_polys,
+                               bounds_before, _bounds(ob))
         if not problem:
             bpy.data.meshes.remove(backup)
             if delete_cutter:

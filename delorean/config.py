@@ -14,18 +14,40 @@ from dataclasses import dataclass, field
 REQUIRED_BLENDER = (5, 2)
 
 # --------------------------------------------------------------------------- car
-LENGTH = 4.267
-WIDTH = 1.988
-HEIGHT = 1.140
-WHEELBASE = 2.413
+# Sourced, not remembered. Primary source is the factory dimension diagram as
+# transcribed by DeLorean Directory (its A-J letter codes are the callouts on
+# that drawing); cross-checked against Wikipedia and UltimateSpecs.
+#
+#   https://www.deloreandirectory.com/specs/
+#   https://en.wikipedia.org/wiki/DMC_DeLorean
+#   https://www.ultimatespecs.com/car-specs/Delorean/17644/Delorean-DMC-12-.html
+#
+# WIDTH is the one worth flagging. Wikipedia says 1,988 mm (78.3 in) and it is
+# the outlier: the factory diagram gives 73.1 in, UltimateSpecs 72.83 in,
+# conceptcarz 73.1 in and cardealerships 73.00 in - all ~1,850-1,857 mm. The
+# narrower figure is also the one the photographs support, since the rear tyres
+# sit very nearly flush with the bodyside on a real car, which only works if the
+# body is about 1,857 mm across a 1,588 mm rear track.
+LENGTH = 4.267           # 168.0 in. The factory diagram says 166 in (4.216 m);
+                         # 168 in is the more widely published figure.
+WIDTH = 1.857            # 73.1 in, doors closed
+HEIGHT = 1.140           # 44.88 in, doors closed
+HEIGHT_DOORS_OPEN = 1.962    # 77.2 in, over the mirror
+WHEELBASE = 2.413        # 95.0 in
 
 FRONT_AXLE_X = -WHEELBASE / 2
 REAR_AXLE_X = WHEELBASE / 2
 
-TRACK_FRONT = 1.588
-TRACK_REAR = 1.605
+TRACK_FRONT = 1.590      # 62.6 in - marginally wider than the rear
+TRACK_REAR = 1.588       # 62.5 in
 HALF_TRACK_FRONT = TRACK_FRONT / 2
 HALF_TRACK_REAR = TRACK_REAR / 2
+
+GROUND_CLEARANCE_FRONT = 0.142   # 5.6 in
+GROUND_CLEARANCE_REAR = 0.155    # 6.1 in
+
+KERB_WEIGHT = 1233.0     # kg
+WEIGHT_DISTRIBUTION = (0.38, 0.62)   # front / rear
 
 
 @dataclass(frozen=True)
